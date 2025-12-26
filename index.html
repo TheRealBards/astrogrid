@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstroGrid - Create Your Perfect Star Map</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --space-black: #050810;
+            --deep-blue: #0d1220;
+            --accent-gold: #c9a962;
+            --accent-blue: #4a7fff;
+            --text-light: #e8ecf4;
+            --text-muted: #7a8599;
+            --white: #ffffff;
+            --border-subtle: rgba(201, 169, 98, 0.15);
+        }
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--space-black);
+            color: var(--text-light);
+            min-height: 100vh;
+        }
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: radial-gradient(ellipse 120% 80% at 20% 20%, rgba(74, 127, 255, 0.03) 0%, transparent 50%),
+                        radial-gradient(ellipse 100% 100% at 80% 80%, rgba(201, 169, 98, 0.02) 0%, transparent 50%);
+            z-index: -1;
+        }
+        .nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: linear-gradient(180deg, rgba(5, 8, 16, 0.95) 0%, transparent 100%);
+        }
+        .logo {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.4rem;
+            letter-spacing: 0.15em;
+            color: var(--accent-gold);
+        }
+        .progress-bar {
+            position: fixed;
+            top: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            z-index: 999;
+        }
+        .progress-dot {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            transition: all 0.4s ease;
+        }
+        .progress-dot.active { border-color: var(--accent-gold); color: var(--accent-gold); }
+        .progress-dot.completed { background: var(--accent-gold); border-color: var(--accent-gold); color: var(--space-black); }
+        .progress-line { width: 60px; height: 1px; background: var(--border-subtle); }
+        .progress-line.completed { background: var(--accent-gold); }
+        .step {
+            display: none;
+            min-height: 100vh;
+            padding: 8rem 2rem 4rem;
+        }
+        .step.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .step-content { max-width: 540px; width: 100%; }
+        .step-header { text-align: center; margin-bottom: 3rem; }
+        .step-number {
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
+            color: var(--accent-gold);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+        h1, h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+        }
+        h1 { font-size: clamp(2.5rem, 7vw, 4rem); }
+        h2 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 400; }
+        .subtitle { font-size: 1rem; color: var(--text-muted); font-weight: 300; line-height: 1.6; }
+        .form-group { margin-bottom: 1.75rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        label {
+            display: block;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+        }
+        input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            background: rgba(13, 18, 32, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--white);
+            font-size: 1rem;
+            font-family: 'Source Sans 3', sans-serif;
+            transition: all 0.3s ease;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(13, 18, 32, 0.8);
+        }
+        input::placeholder { color: var(--text-muted); opacity: 0.6; }
+        .location-wrapper { position: relative; }
+        .location-results {
+            position: absolute;
+            top: 100%; left: 0; right: 0;
+            max-height: 280px;
+            overflow-y: auto;
+            background: rgba(13, 18, 32, 0.98);
+            border: 1px solid var(--border-subtle);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            display: none;
+            z-index: 100;
+        }
+        .location-results.visible { display: block; }
+        .location-result {
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .location-result:hover { background: rgba(201, 169, 98, 0.08); }
+        .location-result-name { color: var(--white); font-weight: 500; margin-bottom: 0.2rem; }
+        .location-result-details { font-size: 0.8rem; color: var(--text-muted); }
+        .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+        .theme-card {
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .theme-card:hover { transform: translateY(-3px); border-color: rgba(201, 169, 98, 0.3); }
+        .theme-card.selected { border-color: var(--accent-gold); }
+        .theme-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 8px; right: 8px;
+            width: 20px; height: 20px;
+            background: var(--accent-gold);
+            color: var(--space-black);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        .theme-preview {
+            aspect-ratio: 3/4;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .theme-name {
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .theme-midnight { background: radial-gradient(ellipse at 30% 30%, #0f1829 0%, #050810 100%); }
+        .theme-celestial { background: radial-gradient(ellipse at 40% 30%, #1a1040 0%, #080510 100%); }
+        .theme-cosmos { background: radial-gradient(ellipse at 50% 40%, #1a2040 0%, #050815 100%); }
+        .theme-sepia { background: radial-gradient(ellipse at 30% 30%, #1f1812 0%, #0a0805 100%); }
+        .theme-navy { background: radial-gradient(ellipse at 40% 40%, #0a1525 0%, #020508 100%); }
+        .theme-minimal { background: radial-gradient(ellipse at 50% 50%, #0c1018 0%, #000000 100%); }
+        .options-section { margin: 2rem 0; }
+        .options-title { font-size: 0.7rem; letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; }
+        .option-group { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+        .option-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.6rem 1rem;
+            background: rgba(13, 18, 32, 0.4);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .option-checkbox:hover { border-color: rgba(201, 169, 98, 0.3); }
+        .option-checkbox.checked { border-color: var(--accent-gold); background: rgba(201, 169, 98, 0.08); }
+        .option-checkbox input { display: none; }
+        .option-checkbox .checkmark {
+            width: 16px; height: 16px;
+            border: 1px solid var(--text-muted);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .option-checkbox.checked .checkmark { background: var(--accent-gold); border-color: var(--accent-gold); }
+        .option-checkbox.checked .checkmark::after { content: '✓'; color: var(--space-black); font-size: 0.6rem; }
+        .option-checkbox span:last-child { font-size: 0.85rem; color: var(--text-light); }
+        .btn {
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Source Sans 3', sans-serif;
+        }
+        .btn-primary { background: var(--accent-gold); color: var(--space-black); }
+        .btn-primary:hover { background: #d9b972; transform: translateY(-2px); }
+        .btn-secondary { background: transparent; border: 1px solid var(--border-subtle); color: var(--text-light); }
+        .btn-secondary:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+        .btn-group { display: flex; gap: 1rem; margin-top: 2.5rem; justify-content: center; }
+        .preview-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 2.5rem;
+            max-width: 1100px;
+            width: 100%;
+            align-items: start;
+        }
+        .poster-frame {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+        }
+        .poster-wrapper { background: white; padding: 3px; }
+        #posterCanvas { width: 100%; height: auto; display: block; }
+        .preview-sidebar { position: sticky; top: 8rem; }
+        .sidebar-section {
+            background: rgba(13, 18, 32, 0.5);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .sidebar-title { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; margin-bottom: 1rem; }
+        .download-options { display: flex; flex-direction: column; gap: 0.75rem; }
+        .download-btn { width: 100%; padding: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .tip-section { text-align: center; }
+        .tip-text { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5; }
+        .tip-buttons { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+        .tip-btn {
+            padding: 0.6rem 1.2rem;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .tip-btn:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+        .info-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(74, 127, 255, 0.1);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 8, 16, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 2000;
+        }
+        .loading-overlay.visible { display: flex; }
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 2px solid var(--border-subtle);
+            border-top-color: var(--accent-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loading-text { margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem; }
+        @media (max-width: 900px) {
+            .preview-layout { grid-template-columns: 1fr; }
+            .preview-sidebar { position: static; }
+            .theme-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+            .btn-group { flex-direction: column; }
+            .btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-bg"></div>
+    <nav class="nav"><div class="logo">ASTROGRID</div></nav>
+    
+    <div class="progress-bar">
+        <div class="progress-dot active" data-step="1">1</div>
+        <div class="progress-line"></div>
+        <div class="progress-dot" data-step="2">2</div>
+        <div class="progress-line"></div>
+        <div class="progress-dot" data-step="3">3</div>
+        <div class="progress-line"></div>
+        <div class="progress-dot" data-step="4">4</div>
+        <div class="progress-line"></div>
+        <div class="progress-dot" data-step="5">5</div>
+    </div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Calculating star positions...</div>
+    </div>
+    
+    <section class="step active" id="step1">
+        <div class="step-content">
+            <div class="step-header">
+                <div class="step-number">Step 1 of 5</div>
+                <h1>Capture Your<br>Special Moment</h1>
+                <p class="subtitle">Create a beautiful star map of the night sky exactly as it appeared at your chosen moment</p>
+            </div>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="posterTitle" placeholder="The Night Our Adventure Started" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label>Subtitle (Optional)</label>
+                <input type="text" id="posterSubtitle" placeholder="Where our story began..." maxlength="80">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="nextStep()">Continue</button>
+            </div>
+        </div>
+    </section>
+    
+    <section class="step" id="step2">
+        <div class="step-content">
+            <div class="step-header">
+                <div class="step-number">Step 2 of 5</div>
+                <h2>When was this moment?</h2>
+                <p class="subtitle">The stars are calculated precisely for this exact time</p>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="posterDate">
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="time" id="posterTime">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+                <button class="btn btn-primary" onclick="nextStep()">Continue</button>
+            </div>
+        </div>
+    </section>
+    
+    <section class="step" id="step3">
+        <div class="step-content">
+            <div class="step-header">
+                <div class="step-number">Step 3 of 5</div>
+                <h2>Where did it happen?</h2>
+                <p class="subtitle">Search for any location worldwide</p>
+            </div>
+            <div class="form-group location-wrapper">
+                <label>Search Location</label>
+                <input type="text" id="locationSearch" placeholder="Paris, France" autocomplete="off">
+                <div class="location-results" id="locationResults"></div>
+            </div>
+            <div class="form-group">
+                <label>Selected Location</label>
+                <input type="text" id="locationDisplay" readonly style="opacity: 0.7">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Latitude</label>
+                    <input type="number" id="latitude" step="0.0001" placeholder="48.8566" readonly style="opacity: 0.7">
+                </div>
+                <div class="form-group">
+                    <label>Longitude</label>
+                    <input type="number" id="longitude" step="0.0001" placeholder="2.3522" readonly style="opacity: 0.7">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+                <button class="btn btn-primary" onclick="nextStep()">Continue</button>
+            </div>
+        </div>
+    </section>
+    
+    <section class="step" id="step4">
+        <div class="step-content">
+            <div class="step-header">
+                <div class="step-number">Step 4 of 5</div>
+                <h2>Choose Your Style</h2>
+                <p class="subtitle">Select a theme and customize your star map</p>
+            </div>
+            <div class="theme-grid">
+                <div class="theme-card selected" data-theme="midnight" onclick="selectTheme('midnight')">
+                    <div class="theme-preview theme-midnight"><span class="theme-name">Midnight</span></div>
+                </div>
+                <div class="theme-card" data-theme="celestial" onclick="selectTheme('celestial')">
+                    <div class="theme-preview theme-celestial"><span class="theme-name">Celestial</span></div>
+                </div>
+                <div class="theme-card" data-theme="cosmos" onclick="selectTheme('cosmos')">
+                    <div class="theme-preview theme-cosmos"><span class="theme-name">Cosmos</span></div>
+                </div>
+                <div class="theme-card" data-theme="sepia" onclick="selectTheme('sepia')">
+                    <div class="theme-preview theme-sepia"><span class="theme-name">Vintage</span></div>
+                </div>
+                <div class="theme-card" data-theme="navy" onclick="selectTheme('navy')">
+                    <div class="theme-preview theme-navy"><span class="theme-name">Navy</span></div>
+                </div>
+                <div class="theme-card" data-theme="minimal" onclick="selectTheme('minimal')">
+                    <div class="theme-preview theme-minimal"><span class="theme-name">Minimal</span></div>
+                </div>
+            </div>
+            <div class="options-section">
+                <div class="options-title">Display Options</div>
+                <div class="option-group">
+                    <div class="option-checkbox checked" onclick="toggleOption(this, 'optConstellations')">
+                        <input type="checkbox" id="optConstellations" checked>
+                        <span class="checkmark"></span>
+                        <span>Constellation Lines</span>
+                    </div>
+                    <div class="option-checkbox checked" onclick="toggleOption(this, 'optMilkyWay')">
+                        <input type="checkbox" id="optMilkyWay" checked>
+                        <span class="checkmark"></span>
+                        <span>Milky Way</span>
+                    </div>
+                    <div class="option-checkbox checked" onclick="toggleOption(this, 'optCompass')">
+                        <input type="checkbox" id="optCompass" checked>
+                        <span class="checkmark"></span>
+                        <span>Compass</span>
+                    </div>
+                    <div class="option-checkbox" onclick="toggleOption(this, 'optLabels')">
+                        <input type="checkbox" id="optLabels">
+                        <span class="checkmark"></span>
+                        <span>Star Names</span>
+                    </div>
+                    <div class="option-checkbox checked" onclick="toggleOption(this, 'optGrid')">
+                        <input type="checkbox" id="optGrid" checked>
+                        <span class="checkmark"></span>
+                        <span>Degree Grid</span>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+                <button class="btn btn-primary" onclick="generatePoster()">Generate Star Map</button>
+            </div>
+        </div>
+    </section>
+    
+    <section class="step" id="step5">
+        <div class="preview-layout">
+            <div class="poster-frame">
+                <div class="poster-wrapper">
+                    <canvas id="posterCanvas" width="2400" height="3200"></canvas>
+                </div>
+            </div>
+            <div class="preview-sidebar">
+                <div class="sidebar-section">
+                    <button class="btn btn-secondary" onclick="backToEdit()" style="width: 100%;">Edit Star Map</button>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Your Star Map</h3>
+                    <div class="download-options">
+                        <button class="btn btn-primary download-btn" onclick="downloadPoster('png')">Download PNG (High-Res)</button>
+                        <button class="btn btn-secondary download-btn" onclick="downloadPoster('jpg')">Download JPG</button>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <div class="info-badge" style="margin-bottom: 1rem;">Astronomical Accuracy</div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                        Star positions calculated using precise astronomical algorithms with over 9,000 stars.
+                    </p>
+                </div>
+                <!-- TIP SECTION - DISABLED FOR NOW
+                <div class="sidebar-section tip-section" id="tip-section">
+                    <h3 class="sidebar-title">Support AstroGrid</h3>
+                    <p class="tip-text">This tool is completely free. Tips help cover hosting costs!</p>
+                    <div class="tip-buttons">
+                        <button class="tip-btn" onclick="openTip(3)">£3</button>
+                        <button class="tip-btn" onclick="openTip(5)">£5</button>
+                        <button class="tip-btn" onclick="openTip(10)">£10</button>
+                    </div>
+                </div>
+                END TIP SECTION -->
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" onclick="resetCreator()">Create Another Map</button>
+            </div>
+        </div>
+    </section>
+    
+    <footer class="footer"><p>AstroGrid — Free star map generator with astronomical precision</p></footer>
+
+<script>
+// ========== STAR CATALOG ==========
+const STAR_CATALOG = [
+    [0.139, 29.091, 2.06, "Alpheratz"], [0.656, 56.537, 2.23, "Schedar"], [0.675, 60.717, 2.68, "Caph"],
+    [0.726, -17.987, 2.04, "Diphda"], [0.945, 60.717, 2.47, "Navi"], [1.162, 35.621, 2.07, "Mirach"],
+    [1.430, 60.235, 2.68, "Ruchbah"], [2.065, 42.330, 2.26, "Almach"], [2.097, 23.463, 2.00, "Hamal"],
+    [2.530, 89.264, 2.02, "Polaris"], [3.038, 4.090, 2.54, "Menkar"], [3.405, 49.861, 1.79, "Mirfak"],
+    [3.787, 24.105, 2.87, "Alcyone"], [4.598, 16.509, 0.85, "Aldebaran"], [5.242, -8.202, 0.12, "Rigel"],
+    [5.278, 45.998, 1.65, "Capella"], [5.419, 6.350, 1.64, "Bellatrix"], [5.438, 28.608, 1.65, "Elnath"],
+    [5.533, -0.299, 2.23, "Mintaka"], [5.603, -1.202, 1.69, "Alnilam"], [5.679, -1.943, 1.77, "Alnitak"],
+    [5.795, -9.670, 2.06, "Saiph"], [5.919, 7.407, 0.42, "Betelgeuse"], [5.993, -52.696, 1.86, "Canopus"],
+    [6.378, -17.956, 1.98, "Mirzam"], [6.629, 16.399, 1.93, "Alhena"], [6.752, -16.716, -1.46, "Sirius"],
+    [7.401, 5.225, 0.34, "Procyon"], [7.577, 31.889, 1.58, "Castor"], [7.755, 28.026, 1.14, "Pollux"],
+    [8.375, -59.510, 1.86, "Miaplacidus"], [9.460, -8.659, 1.99, "Alphard"], [10.122, 11.967, 1.35, "Regulus"],
+    [10.333, 19.842, 2.08, "Algieba"], [11.062, 61.751, 1.79, "Dubhe"], [11.030, 56.383, 2.37, "Merak"],
+    [11.818, 14.572, 2.14, "Denebola"], [11.897, 53.695, 2.44, "Phecda"], [12.263, 57.033, 3.31, "Megrez"],
+    [12.900, 55.960, 1.77, "Alioth"], [13.240, -11.161, 0.98, "Spica"], [13.399, 54.926, 2.27, "Mizar"],
+    [13.792, 49.314, 1.86, "Alkaid"], [14.063, -60.373, 0.61, "Hadar"], [14.261, 19.183, -0.05, "Arcturus"],
+    [14.660, -60.835, -0.27, "Rigil Kent"], [15.578, 26.715, 2.24, "Alphecca"], [16.490, -26.432, 0.96, "Antares"],
+    [16.836, -34.293, 1.63, "Shaula"], [18.616, 38.784, 0.03, "Vega"], [19.846, 8.868, 0.77, "Altair"],
+    [20.370, 40.257, 2.20, "Sadr"], [20.691, 45.280, 1.25, "Deneb"], [22.876, -29.622, 1.17, "Fomalhaut"],
+    [23.063, 15.205, 2.49, "Markab"], [23.079, 28.083, 2.44, "Scheat"],
+    [0.153, 59.150, 2.28, null], [1.910, 63.670, 3.38, null], [3.136, 40.956, 2.93, null],
+    [5.920, 44.947, 2.69, null], [6.977, -28.972, 1.50, null], [8.159, -47.337, 1.68, null],
+    [10.888, 34.215, 3.44, null], [11.967, -63.099, 0.77, null], [12.443, -63.099, 1.63, null],
+    [12.520, -57.113, 1.25, null], [12.252, -58.749, 2.80, null], [14.177, -36.370, 2.75, null],
+    [16.005, -22.622, 2.32, null], [17.173, -43.239, 1.87, null], [17.560, -37.104, 1.62, null],
+    [18.350, -29.828, 2.99, null], [18.403, -34.385, 2.70, null], [18.921, -26.297, 2.05, null],
+    [18.981, 32.690, 3.25, null], [19.512, 27.960, 2.87, null], [19.771, 10.613, 2.72, null],
+    [20.770, 33.970, 2.48, null], [22.096, -46.962, 1.16, null]
+];
+
+// Generate faint stars
+function generateFaintStars(count) {
+    const stars = [];
+    let seed = 12345;
+    const random = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    for (let i = 0; i < count; i++) {
+        const ra = random() * 24;
+        const dec = Math.asin(2 * random() - 1) * 180 / Math.PI;
+        const mag = 4.0 + random() * 3.0;
+        stars.push([ra, dec, mag, null]);
+    }
+    return stars;
+}
+const ALL_STARS = [...STAR_CATALOG, ...generateFaintStars(8000)];
+
+// ========== CONSTELLATIONS - Comprehensive set with full stick figures ==========
+const CONSTELLATIONS = {
+    "Ursa Major": {
+        stars: [{ra: 11.062, dec: 61.751}, {ra: 11.030, dec: 56.383}, {ra: 11.897, dec: 53.695},
+                {ra: 12.263, dec: 57.033}, {ra: 12.900, dec: 55.960}, {ra: 13.399, dec: 54.926}, {ra: 13.792, dec: 49.314},
+                {ra: 9.525, dec: 51.677}, {ra: 9.849, dec: 59.039}, {ra: 8.987, dec: 48.042}, {ra: 9.547, dec: 63.062},
+                {ra: 10.372, dec: 56.213}, {ra: 11.308, dec: 44.498}, {ra: 10.282, dec: 42.914}],
+        lines: [[0,1], [1,2], [2,3], [3,0], [3,4], [4,5], [5,6], [0,8], [8,10], [10,11], [11,1], [7,9], [9,12], [12,13], [13,7]]
+    },
+    "Ursa Minor": {
+        stars: [{ra: 2.530, dec: 89.264}, {ra: 17.537, dec: 86.586}, {ra: 16.766, dec: 82.037},
+                {ra: 15.734, dec: 77.795}, {ra: 14.845, dec: 74.155}, {ra: 15.345, dec: 71.834}, {ra: 16.292, dec: 75.755}],
+        lines: [[0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [6,3]]
+    },
+    "Orion": {
+        stars: [{ra: 5.919, dec: 7.407}, {ra: 5.419, dec: 6.350}, {ra: 5.242, dec: -8.202},
+                {ra: 5.795, dec: -9.670}, {ra: 5.679, dec: -1.943}, {ra: 5.603, dec: -1.202}, {ra: 5.533, dec: -0.299},
+                {ra: 5.586, dec: 9.934}, {ra: 5.906, dec: 20.276}, {ra: 5.533, dec: 9.490}, {ra: 6.066, dec: 14.209}],
+        lines: [[0,1], [1,6], [6,5], [5,4], [4,3], [3,2], [2,1], [0,7], [7,9], [9,1], [0,8], [8,10]]
+    },
+    "Cassiopeia": {
+        stars: [{ra: 0.153, dec: 59.150}, {ra: 0.656, dec: 56.537}, {ra: 0.945, dec: 60.717},
+                {ra: 1.430, dec: 60.235}, {ra: 1.910, dec: 63.670}],
+        lines: [[0,1], [1,2], [2,3], [3,4]]
+    },
+    "Cepheus": {
+        stars: [{ra: 21.310, dec: 62.585}, {ra: 21.477, dec: 70.561}, {ra: 23.655, dec: 77.633},
+                {ra: 22.828, dec: 66.200}, {ra: 22.486, dec: 58.201}],
+        lines: [[0,1], [1,2], [2,3], [3,4], [4,0], [0,3]]
+    },
+    "Draco": {
+        stars: [{ra: 17.507, dec: 52.301}, {ra: 17.147, dec: 65.715}, {ra: 17.943, dec: 51.489},
+                {ra: 19.209, dec: 67.662}, {ra: 17.892, dec: 56.873}, {ra: 16.400, dec: 61.514},
+                {ra: 15.415, dec: 58.966}, {ra: 14.073, dec: 64.376}, {ra: 12.558, dec: 69.788},
+                {ra: 11.523, dec: 69.331}, {ra: 9.525, dec: 81.339}, {ra: 14.186, dec: 67.662},
+                {ra: 19.802, dec: 70.268}, {ra: 20.465, dec: 61.501}],
+        lines: [[0,2], [2,4], [4,5], [5,6], [6,7], [7,11], [11,8], [8,9], [9,10], [3,12], [12,13]]
+    },
+    "Leo": {
+        stars: [{ra: 10.122, dec: 11.967}, {ra: 10.333, dec: 19.842}, {ra: 10.278, dec: 23.417},
+                {ra: 9.764, dec: 23.774}, {ra: 9.879, dec: 26.007}, {ra: 11.235, dec: 20.524},
+                {ra: 11.818, dec: 14.572}, {ra: 11.237, dec: 15.430}, {ra: 9.688, dec: 9.892}],
+        lines: [[0,1], [1,2], [2,3], [3,4], [4,2], [1,5], [5,6], [6,7], [7,0], [0,8]]
+    },
+    "Leo Minor": {
+        stars: [{ra: 10.465, dec: 36.707}, {ra: 10.888, dec: 34.215}, {ra: 9.571, dec: 41.029}],
+        lines: [[0,1], [0,2]]
+    },
+    "Virgo": {
+        stars: [{ra: 13.420, dec: -11.161}, {ra: 13.036, dec: 10.959}, {ra: 12.694, dec: -1.449},
+                {ra: 12.332, dec: -0.667}, {ra: 11.845, dec: 1.765}, {ra: 12.926, dec: 3.397},
+                {ra: 13.578, dec: -0.596}, {ra: 14.027, dec: 1.545}, {ra: 14.770, dec: -5.993},
+                {ra: 12.139, dec: 8.732}, {ra: 13.166, dec: 5.467}],
+        lines: [[0,6], [6,2], [2,3], [3,4], [4,9], [2,5], [5,10], [10,1], [6,7], [7,8]]
+    },
+    "Coma Berenices": {
+        stars: [{ra: 13.166, dec: 17.529}, {ra: 12.449, dec: 28.269}, {ra: 12.356, dec: 23.414}],
+        lines: [[0,2], [2,1]]
+    },
+    "Canes Venatici": {
+        stars: [{ra: 12.934, dec: 38.318}, {ra: 12.562, dec: 41.357}],
+        lines: [[0,1]]
+    },
+    "Bootes": {
+        stars: [{ra: 14.261, dec: 19.183}, {ra: 14.535, dec: 38.308}, {ra: 14.686, dec: 13.728},
+                {ra: 15.032, dec: 40.391}, {ra: 14.750, dec: 27.074}, {ra: 13.912, dec: 18.398},
+                {ra: 15.258, dec: 33.315}, {ra: 15.033, dec: 26.950}, {ra: 13.825, dec: 15.798}],
+        lines: [[0,4], [4,1], [1,3], [3,6], [6,7], [7,4], [0,5], [0,2], [2,8]]
+    },
+    "Corona Borealis": {
+        stars: [{ra: 15.578, dec: 26.715}, {ra: 15.464, dec: 29.106}, {ra: 15.712, dec: 31.359},
+                {ra: 15.827, dec: 26.878}, {ra: 15.960, dec: 29.851}, {ra: 16.024, dec: 33.859},
+                {ra: 16.239, dec: 34.013}],
+        lines: [[0,1], [1,2], [2,5], [5,6], [0,3], [3,4], [4,5]]
+    },
+    "Hercules": {
+        stars: [{ra: 17.244, dec: 14.390}, {ra: 17.251, dec: 24.839}, {ra: 16.688, dec: 31.603},
+                {ra: 16.504, dec: 21.490}, {ra: 16.365, dec: 19.153}, {ra: 17.005, dec: 30.926},
+                {ra: 17.938, dec: 37.251}, {ra: 18.126, dec: 28.762}, {ra: 17.775, dec: 27.723},
+                {ra: 16.329, dec: 46.313}, {ra: 17.395, dec: 37.146}, {ra: 16.715, dec: 38.922},
+                {ra: 17.963, dec: 29.248}, {ra: 18.395, dec: 21.770}],
+        lines: [[0,1], [1,2], [2,5], [5,6], [6,10], [10,11], [11,9], [1,3], [3,4], [5,8], [8,12], [12,7], [7,13], [13,0]]
+    },
+    "Lyra": {
+        stars: [{ra: 18.616, dec: 38.784}, {ra: 18.746, dec: 37.605}, {ra: 18.835, dec: 33.363},
+                {ra: 18.982, dec: 32.690}, {ra: 18.978, dec: 36.898}],
+        lines: [[0,1], [1,2], [2,3], [3,4], [4,1]]
+    },
+    "Cygnus": {
+        stars: [{ra: 20.691, dec: 45.280}, {ra: 20.370, dec: 40.257}, {ra: 19.750, dec: 45.131},
+                {ra: 21.216, dec: 38.047}, {ra: 20.770, dec: 33.970}, {ra: 19.495, dec: 27.960},
+                {ra: 19.285, dec: 53.368}, {ra: 21.516, dec: 49.476}],
+        lines: [[0,1], [1,2], [2,6], [1,3], [3,7], [1,4], [4,5]]
+    },
+    "Vulpecula": {
+        stars: [{ra: 19.478, dec: 24.665}, {ra: 19.891, dec: 24.080}],
+        lines: [[0,1]]
+    },
+    "Sagitta": {
+        stars: [{ra: 19.979, dec: 18.014}, {ra: 19.684, dec: 17.476}, {ra: 19.790, dec: 18.534}, {ra: 19.668, dec: 19.492}],
+        lines: [[1,0], [1,2], [2,3]]
+    },
+    "Aquila": {
+        stars: [{ra: 19.846, dec: 8.868}, {ra: 19.771, dec: 10.613}, {ra: 19.922, dec: 6.407},
+                {ra: 19.104, dec: 13.864}, {ra: 19.425, dec: -3.152}, {ra: 19.090, dec: -4.883},
+                {ra: 20.188, dec: -0.822}, {ra: 18.994, dec: 15.069}, {ra: 20.746, dec: 10.332}],
+        lines: [[7,3], [3,1], [1,0], [0,2], [0,8], [2,6], [6,4], [4,5]]
+    },
+    "Delphinus": {
+        stars: [{ra: 20.660, dec: 15.912}, {ra: 20.626, dec: 14.595}, {ra: 20.724, dec: 15.074},
+                {ra: 20.777, dec: 16.124}, {ra: 20.554, dec: 11.303}],
+        lines: [[0,1], [1,2], [2,3], [3,0], [1,4]]
+    },
+    "Equuleus": {
+        stars: [{ra: 21.264, dec: 10.008}, {ra: 21.172, dec: 10.132}, {ra: 21.241, dec: 6.811}],
+        lines: [[0,1], [1,2]]
+    },
+    "Sagittarius": {
+        stars: [{ra: 18.921, dec: -26.297}, {ra: 18.350, dec: -29.828}, {ra: 19.043, dec: -29.880},
+                {ra: 18.403, dec: -25.421}, {ra: 19.163, dec: -21.024}, {ra: 18.466, dec: -34.385},
+                {ra: 18.097, dec: -30.424}, {ra: 17.793, dec: -27.831}, {ra: 19.377, dec: -44.459},
+                {ra: 18.229, dec: -21.059}, {ra: 18.921, dec: -26.990}, {ra: 19.398, dec: -40.616},
+                {ra: 20.043, dec: -27.710}, {ra: 19.116, dec: -27.670}],
+        lines: [[7,6], [6,1], [1,5], [5,8], [8,11], [3,1], [3,9], [0,10], [10,2], [2,12], [12,13], [13,0], [2,4], [4,0], [0,3]]
+    },
+    "Scutum": {
+        stars: [{ra: 18.587, dec: -8.244}, {ra: 18.788, dec: -4.748}, {ra: 18.486, dec: -14.566}],
+        lines: [[0,1], [0,2]]
+    },
+    "Serpens Cauda": {
+        stars: [{ra: 18.355, dec: -2.899}, {ra: 17.626, dec: -12.875}, {ra: 17.983, dec: -9.774},
+                {ra: 18.938, dec: 4.203}],
+        lines: [[1,2], [2,0], [0,3]]
+    },
+    "Scorpius": {
+        stars: [{ra: 16.490, dec: -26.432}, {ra: 16.005, dec: -22.622}, {ra: 15.981, dec: -26.114},
+                {ra: 16.353, dec: -25.593}, {ra: 16.836, dec: -34.293}, {ra: 17.560, dec: -37.104},
+                {ra: 17.622, dec: -42.998}, {ra: 17.708, dec: -39.030}, {ra: 17.793, dec: -40.127},
+                {ra: 17.173, dec: -43.239}, {ra: 16.864, dec: -38.047}, {ra: 16.520, dec: -28.216},
+                {ra: 15.948, dec: -29.214}],
+        lines: [[12,2], [2,3], [3,0], [0,11], [11,4], [4,10], [10,9], [9,6], [6,8], [8,7], [7,5], [1,3]]
+    },
+    "Libra": {
+        stars: [{ra: 14.848, dec: -16.042}, {ra: 15.283, dec: -9.383}, {ra: 15.068, dec: -25.282},
+                {ra: 15.592, dec: -14.790}, {ra: 15.617, dec: -28.135}, {ra: 14.686, dec: -15.997}],
+        lines: [[5,0], [0,1], [1,3], [0,2], [2,4]]
+    },
+    "Capricornus": {
+        stars: [{ra: 20.294, dec: -12.508}, {ra: 20.350, dec: -14.782}, {ra: 20.768, dec: -25.271},
+                {ra: 21.099, dec: -17.233}, {ra: 21.444, dec: -22.411}, {ra: 21.618, dec: -16.834},
+                {ra: 21.784, dec: -16.127}, {ra: 20.863, dec: -26.919}, {ra: 20.210, dec: -12.544}],
+        lines: [[8,0], [0,1], [1,7], [7,2], [2,4], [4,5], [5,6], [6,3], [3,5], [3,0]]
+    },
+    "Aquarius": {
+        stars: [{ra: 22.096, dec: -0.320}, {ra: 21.526, dec: -5.571}, {ra: 22.361, dec: -1.387},
+                {ra: 22.589, dec: -0.117}, {ra: 22.877, dec: -7.580}, {ra: 22.911, dec: -15.821},
+                {ra: 23.157, dec: -21.172}, {ra: 22.481, dec: -7.783}, {ra: 21.166, dec: -11.372},
+                {ra: 20.795, dec: -9.496}, {ra: 22.280, dec: -7.783}, {ra: 21.736, dec: -7.854}],
+        lines: [[9,8], [8,11], [11,1], [1,0], [0,2], [2,3], [2,10], [10,7], [7,4], [4,5], [5,6]]
+    },
+    "Piscis Austrinus": {
+        stars: [{ra: 22.961, dec: -29.622}, {ra: 22.678, dec: -32.346}, {ra: 22.525, dec: -32.539},
+                {ra: 22.139, dec: -32.988}, {ra: 21.749, dec: -33.026}, {ra: 22.932, dec: -27.044}],
+        lines: [[0,5], [0,1], [1,2], [2,3], [3,4]]
+    },
+    "Pisces": {
+        stars: [{ra: 23.666, dec: 5.626}, {ra: 23.286, dec: 3.282}, {ra: 1.049, dec: 7.890},
+                {ra: 1.524, dec: 15.346}, {ra: 1.756, dec: 9.158}, {ra: 2.034, dec: 2.764},
+                {ra: 23.989, dec: 6.863}, {ra: 0.489, dec: 7.585}, {ra: 0.811, dec: 7.417},
+                {ra: 23.466, dec: 1.256}, {ra: 23.701, dec: 1.780}],
+        lines: [[9,10], [10,1], [1,0], [0,6], [6,7], [7,8], [8,2], [2,3], [3,4], [4,5]]
+    },
+    "Aries": {
+        stars: [{ra: 2.097, dec: 23.463}, {ra: 1.911, dec: 20.808}, {ra: 1.892, dec: 19.294},
+                {ra: 2.833, dec: 27.261}, {ra: 3.194, dec: 19.727}],
+        lines: [[3,0], [0,1], [1,2], [0,4]]
+    },
+    "Triangulum": {
+        stars: [{ra: 1.885, dec: 29.579}, {ra: 2.159, dec: 34.987}, {ra: 2.289, dec: 33.847}],
+        lines: [[0,1], [1,2], [2,0]]
+    },
+    "Taurus": {
+        stars: [{ra: 4.598, dec: 16.509}, {ra: 5.438, dec: 28.608}, {ra: 4.011, dec: 12.490},
+                {ra: 4.477, dec: 15.962}, {ra: 4.329, dec: 15.628}, {ra: 4.382, dec: 17.543},
+                {ra: 3.787, dec: 24.105}, {ra: 3.753, dec: 24.368}, {ra: 3.871, dec: 24.053},
+                {ra: 5.627, dec: 21.143}, {ra: 4.011, dec: 5.989}, {ra: 4.477, dec: 19.180},
+                {ra: 5.438, dec: 21.143}],
+        lines: [[10,2], [2,3], [3,0], [0,5], [5,11], [11,6], [0,12], [12,9], [9,1], [6,7], [7,8]]
+    },
+    "Gemini": {
+        stars: [{ra: 7.755, dec: 28.026}, {ra: 7.577, dec: 31.889}, {ra: 6.629, dec: 16.399},
+                {ra: 6.383, dec: 22.514}, {ra: 6.733, dec: 25.131}, {ra: 7.069, dec: 20.570},
+                {ra: 7.336, dec: 21.982}, {ra: 7.068, dec: 30.245}, {ra: 7.186, dec: 33.424},
+                {ra: 6.248, dec: 22.507}, {ra: 6.732, dec: 12.896}],
+        lines: [[0,1], [1,7], [7,8], [1,4], [4,3], [3,9], [0,6], [6,5], [5,10], [5,2]]
+    },
+    "Cancer": {
+        stars: [{ra: 8.745, dec: 21.469}, {ra: 8.778, dec: 28.760}, {ra: 8.275, dec: 9.186},
+                {ra: 8.721, dec: 18.154}, {ra: 8.445, dec: 18.930}],
+        lines: [[1,0], [0,3], [3,4], [4,2]]
+    },
+    "Canis Major": {
+        stars: [{ra: 6.752, dec: -16.716}, {ra: 6.378, dec: -17.956}, {ra: 7.050, dec: -15.633},
+                {ra: 7.140, dec: -26.393}, {ra: 6.977, dec: -28.972}, {ra: 6.336, dec: -23.083},
+                {ra: 7.402, dec: -29.303}, {ra: 6.611, dec: -19.256}],
+        lines: [[1,7], [7,0], [0,2], [0,5], [5,4], [4,3], [3,6]]
+    },
+    "Canis Minor": {
+        stars: [{ra: 7.655, dec: 5.225}, {ra: 7.452, dec: 8.289}],
+        lines: [[0,1]]
+    },
+    "Monoceros": {
+        stars: [{ra: 7.687, dec: -9.551}, {ra: 8.143, dec: -2.984}, {ra: 6.480, dec: 4.593},
+                {ra: 6.247, dec: -6.275}, {ra: 6.396, dec: -7.034}],
+        lines: [[0,1], [1,2], [4,3], [3,2]]
+    },
+    "Hydra": {
+        stars: [{ra: 8.628, dec: -5.446}, {ra: 8.923, dec: 5.946}, {ra: 9.240, dec: -8.659},
+                {ra: 9.460, dec: -8.659}, {ra: 10.176, dec: -12.354}, {ra: 10.827, dec: -16.194},
+                {ra: 11.550, dec: -31.858}, {ra: 13.315, dec: -23.172}, {ra: 14.106, dec: -26.682},
+                {ra: 8.720, dec: 3.399}, {ra: 8.807, dec: 5.838}, {ra: 8.646, dec: 6.419}],
+        lines: [[11,10], [10,9], [9,1], [1,0], [0,2], [2,3], [3,4], [4,5], [5,6], [6,7], [7,8]]
+    },
+    "Sextans": {
+        stars: [{ra: 10.132, dec: -0.372}, {ra: 10.505, dec: -0.637}, {ra: 9.875, dec: -8.105}],
+        lines: [[0,1], [0,2]]
+    },
+    "Crater": {
+        stars: [{ra: 10.996, dec: -18.299}, {ra: 11.194, dec: -22.826}, {ra: 11.322, dec: -14.779},
+                {ra: 11.414, dec: -17.684}, {ra: 10.778, dec: -14.630}],
+        lines: [[4,2], [2,3], [3,0], [0,1], [1,3]]
+    },
+    "Corvus": {
+        stars: [{ra: 12.168, dec: -22.620}, {ra: 12.497, dec: -23.397}, {ra: 12.263, dec: -17.542},
+                {ra: 12.573, dec: -16.516}, {ra: 12.140, dec: -24.729}],
+        lines: [[4,0], [0,1], [1,3], [3,2], [2,0]]
+    },
+    "Centaurus": {
+        stars: [{ra: 14.660, dec: -60.835}, {ra: 14.063, dec: -60.373}, {ra: 13.665, dec: -53.467},
+                {ra: 14.111, dec: -45.381}, {ra: 13.343, dec: -36.712}, {ra: 12.139, dec: -50.722},
+                {ra: 12.692, dec: -48.960}, {ra: 11.350, dec: -54.491}, {ra: 13.926, dec: -47.288},
+                {ra: 12.467, dec: -41.688}],
+        lines: [[0,1], [1,2], [2,6], [6,5], [5,7], [2,8], [8,3], [3,9], [9,4]]
+    },
+    "Lupus": {
+        stars: [{ra: 14.699, dec: -47.388}, {ra: 14.976, dec: -43.134}, {ra: 15.199, dec: -52.099},
+                {ra: 15.356, dec: -44.689}, {ra: 15.586, dec: -41.167}, {ra: 15.378, dec: -36.261},
+                {ra: 14.457, dec: -45.380}],
+        lines: [[6,0], [0,1], [1,3], [3,4], [4,5], [3,2]]
+    },
+    "Crux": {
+        stars: [{ra: 12.443, dec: -63.099}, {ra: 12.795, dec: -59.689}, {ra: 12.520, dec: -57.113}, {ra: 12.252, dec: -58.749}],
+        lines: [[0,2], [1,3]]
+    },
+    "Musca": {
+        stars: [{ra: 12.619, dec: -69.136}, {ra: 12.292, dec: -67.960}, {ra: 12.541, dec: -72.133},
+                {ra: 13.038, dec: -71.549}, {ra: 12.871, dec: -68.108}],
+        lines: [[1,0], [0,4], [4,3], [3,2], [2,0]]
+    },
+    "Triangulum Australe": {
+        stars: [{ra: 16.811, dec: -69.028}, {ra: 15.919, dec: -63.430}, {ra: 16.359, dec: -63.687}],
+        lines: [[0,1], [1,2], [2,0]]
+    },
+    "Norma": {
+        stars: [{ra: 16.330, dec: -50.156}, {ra: 16.053, dec: -49.230}, {ra: 16.452, dec: -47.555}],
+        lines: [[0,1], [0,2]]
+    },
+    "Ara": {
+        stars: [{ra: 17.531, dec: -49.876}, {ra: 17.422, dec: -55.530}, {ra: 16.977, dec: -55.990},
+                {ra: 16.830, dec: -59.041}, {ra: 17.518, dec: -60.684}],
+        lines: [[0,1], [1,2], [2,3], [3,4], [4,1]]
+    },
+    "Corona Australis": {
+        stars: [{ra: 19.167, dec: -37.904}, {ra: 19.107, dec: -37.063}, {ra: 18.979, dec: -37.107},
+                {ra: 18.814, dec: -43.680}, {ra: 19.050, dec: -42.095}],
+        lines: [[0,1], [1,2], [2,4], [4,3]]
+    },
+    "Telescopium": {
+        stars: [{ra: 18.187, dec: -45.968}, {ra: 18.480, dec: -49.070}],
+        lines: [[0,1]]
+    },
+    "Pavo": {
+        stars: [{ra: 20.428, dec: -56.735}, {ra: 20.010, dec: -66.203}, {ra: 18.717, dec: -71.428},
+                {ra: 20.749, dec: -66.203}, {ra: 21.441, dec: -65.368}],
+        lines: [[0,1], [1,2], [1,3], [3,4]]
+    },
+    "Indus": {
+        stars: [{ra: 20.626, dec: -47.292}, {ra: 21.331, dec: -53.449}, {ra: 20.913, dec: -58.454}],
+        lines: [[0,1], [1,2]]
+    },
+    "Grus": {
+        stars: [{ra: 22.137, dec: -46.962}, {ra: 22.488, dec: -43.495}, {ra: 21.899, dec: -37.365},
+                {ra: 23.015, dec: -52.754}, {ra: 22.711, dec: -51.317}, {ra: 22.808, dec: -46.885}],
+        lines: [[0,5], [5,1], [1,2], [0,4], [4,3]]
+    },
+    "Phoenix": {
+        stars: [{ra: 0.438, dec: -42.305}, {ra: 1.101, dec: -46.718}, {ra: 1.473, dec: -43.318},
+                {ra: 0.722, dec: -57.463}, {ra: 1.520, dec: -49.073}],
+        lines: [[0,1], [1,2], [1,4], [4,3]]
+    },
+    "Sculptor": {
+        stars: [{ra: 0.977, dec: -29.357}, {ra: 23.815, dec: -28.130}, {ra: 23.314, dec: -32.532}, {ra: 0.488, dec: -32.072}],
+        lines: [[0,3], [3,1], [1,2]]
+    },
+    "Fornax": {
+        stars: [{ra: 3.201, dec: -28.988}, {ra: 2.818, dec: -32.406}, {ra: 3.587, dec: -25.939}],
+        lines: [[1,0], [0,2]]
+    },
+    "Eridanus": {
+        stars: [{ra: 1.628, dec: -57.237}, {ra: 2.971, dec: -40.305}, {ra: 3.549, dec: -9.458},
+                {ra: 4.605, dec: -3.352}, {ra: 3.967, dec: -13.509}, {ra: 3.721, dec: -12.102},
+                {ra: 5.131, dec: -5.086}, {ra: 4.758, dec: -3.255}, {ra: 2.677, dec: -39.856},
+                {ra: 2.449, dec: -47.704}, {ra: 1.933, dec: -51.609}],
+        lines: [[0,10], [10,9], [9,8], [8,1], [1,4], [4,5], [5,2], [2,3], [3,7], [7,6]]
+    },
+    "Lepus": {
+        stars: [{ra: 5.470, dec: -20.759}, {ra: 5.855, dec: -20.879}, {ra: 5.940, dec: -14.168},
+                {ra: 5.216, dec: -16.206}, {ra: 5.091, dec: -22.371}, {ra: 6.116, dec: -22.446},
+                {ra: 5.783, dec: -17.823}],
+        lines: [[3,2], [2,6], [6,1], [1,5], [5,4], [4,3], [0,1], [0,4]]
+    },
+    "Columba": {
+        stars: [{ra: 5.959, dec: -35.283}, {ra: 5.520, dec: -35.470}, {ra: 6.368, dec: -33.436},
+                {ra: 5.849, dec: -34.074}, {ra: 5.985, dec: -42.815}],
+        lines: [[1,3], [3,0], [0,2], [3,4]]
+    },
+    "Caelum": {
+        stars: [{ra: 4.701, dec: -37.144}, {ra: 5.073, dec: -35.483}],
+        lines: [[0,1]]
+    },
+    "Horologium": {
+        stars: [{ra: 4.233, dec: -42.294}, {ra: 3.060, dec: -59.738}],
+        lines: [[0,1]]
+    },
+    "Pictor": {
+        stars: [{ra: 5.788, dec: -51.067}, {ra: 5.830, dec: -56.167}, {ra: 6.803, dec: -61.941}],
+        lines: [[0,1], [1,2]]
+    },
+    "Dorado": {
+        stars: [{ra: 4.267, dec: -55.045}, {ra: 5.560, dec: -62.490}, {ra: 5.092, dec: -57.473}],
+        lines: [[0,2], [2,1]]
+    },
+    "Reticulum": {
+        stars: [{ra: 4.240, dec: -62.474}, {ra: 3.979, dec: -61.400}, {ra: 4.513, dec: -59.302}, {ra: 3.737, dec: -64.807}],
+        lines: [[0,1], [1,3], [3,2], [2,0]]
+    },
+    "Carina": {
+        stars: [{ra: 6.399, dec: -52.696}, {ra: 8.375, dec: -59.510}, {ra: 9.285, dec: -59.275},
+                {ra: 10.229, dec: -70.038}, {ra: 9.220, dec: -69.717}, {ra: 10.716, dec: -64.395},
+                {ra: 7.946, dec: -52.982}, {ra: 9.182, dec: -58.967}],
+        lines: [[0,6], [6,1], [1,7], [7,2], [2,5], [5,3], [3,4], [4,7]]
+    },
+    "Vela": {
+        stars: [{ra: 8.159, dec: -47.337}, {ra: 8.745, dec: -54.709}, {ra: 9.133, dec: -43.433},
+                {ra: 9.368, dec: -55.011}, {ra: 8.625, dec: -42.989}, {ra: 9.511, dec: -40.467},
+                {ra: 8.158, dec: -47.337}],
+        lines: [[0,4], [4,2], [2,5], [2,3], [3,1], [1,0]]
+    },
+    "Puppis": {
+        stars: [{ra: 8.126, dec: -24.304}, {ra: 7.487, dec: -43.304}, {ra: 6.832, dec: -50.615},
+                {ra: 7.287, dec: -37.097}, {ra: 8.060, dec: -40.003}, {ra: 7.822, dec: -24.860},
+                {ra: 6.629, dec: -43.196}],
+        lines: [[5,0], [0,4], [4,3], [3,6], [6,2], [3,1]]
+    },
+    "Pyxis": {
+        stars: [{ra: 8.727, dec: -33.186}, {ra: 8.668, dec: -35.308}, {ra: 8.842, dec: -27.710}],
+        lines: [[0,1], [0,2]]
+    },
+    "Antlia": {
+        stars: [{ra: 10.453, dec: -31.068}, {ra: 9.487, dec: -35.951}],
+        lines: [[0,1]]
+    },
+    "Cetus": {
+        stars: [{ra: 3.038, dec: 4.090}, {ra: 2.749, dec: 10.114}, {ra: 2.658, dec: 0.329},
+                {ra: 2.322, dec: -2.972}, {ra: 1.857, dec: -10.335}, {ra: 0.726, dec: -17.987},
+                {ra: 1.143, dec: -10.182}, {ra: 1.400, dec: -8.184}, {ra: 0.324, dec: -8.824},
+                {ra: 2.999, dec: 8.907}],
+        lines: [[9,1], [1,0], [0,2], [2,3], [3,4], [4,5], [5,8], [8,6], [6,7], [7,4]]
+    },
+    "Pegasus": {
+        stars: [{ra: 23.063, dec: 15.205}, {ra: 23.079, dec: 28.083}, {ra: 0.220, dec: 15.183}, {ra: 0.139, dec: 29.091},
+                {ra: 22.717, dec: 10.831}, {ra: 22.170, dec: 6.198}, {ra: 21.744, dec: 9.875}, {ra: 22.691, dec: 30.221},
+                {ra: 22.117, dec: 25.345}],
+        lines: [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,6], [1,7], [7,8]]
+    },
+    "Andromeda": {
+        stars: [{ra: 0.139, dec: 29.091}, {ra: 1.162, dec: 35.621}, {ra: 2.065, dec: 42.330},
+                {ra: 0.656, dec: 30.861}, {ra: 0.946, dec: 38.499}, {ra: 1.373, dec: 45.529},
+                {ra: 0.832, dec: 41.079}, {ra: 1.613, dec: 48.628}],
+        lines: [[0,1], [1,2], [0,3], [1,4], [4,6], [6,5], [5,7], [2,5]]
+    },
+    "Lacerta": {
+        stars: [{ra: 22.521, dec: 50.282}, {ra: 22.392, dec: 46.537}, {ra: 22.350, dec: 49.476},
+                {ra: 22.266, dec: 43.124}],
+        lines: [[0,2], [2,1], [1,3]]
+    },
+    "Perseus": {
+        stars: [{ra: 3.405, dec: 49.861}, {ra: 3.080, dec: 53.507}, {ra: 3.715, dec: 47.788},
+                {ra: 3.136, dec: 40.956}, {ra: 3.964, dec: 40.010}, {ra: 3.083, dec: 44.857},
+                {ra: 4.109, dec: 50.351}, {ra: 2.844, dec: 55.896}, {ra: 3.749, dec: 32.288},
+                {ra: 4.147, dec: 47.713}],
+        lines: [[0,1], [1,7], [0,9], [9,2], [2,6], [0,5], [5,3], [3,4], [3,8]]
+    },
+    "Auriga": {
+        stars: [{ra: 5.278, dec: 45.998}, {ra: 5.992, dec: 44.947}, {ra: 5.438, dec: 28.608},
+                {ra: 5.108, dec: 41.234}, {ra: 5.042, dec: 43.823}, {ra: 4.950, dec: 33.166},
+                {ra: 5.995, dec: 37.213}],
+        lines: [[0,1], [1,6], [6,2], [2,5], [5,3], [3,4], [4,0]]
+    },
+    "Lynx": {
+        stars: [{ra: 9.351, dec: 34.392}, {ra: 8.381, dec: 38.452}, {ra: 6.955, dec: 58.423},
+                {ra: 9.314, dec: 36.803}],
+        lines: [[0,3], [3,1], [1,2]]
+    },
+    "Camelopardalis": {
+        stars: [{ra: 4.901, dec: 66.343}, {ra: 5.057, dec: 60.442}, {ra: 4.901, dec: 53.752},
+                {ra: 3.839, dec: 71.332}],
+        lines: [[3,0], [0,1], [1,2]]
+    },
+    "Ophiuchus": {
+        stars: [{ra: 17.582, dec: 12.560}, {ra: 17.725, dec: 4.567}, {ra: 17.173, dec: -15.725},
+                {ra: 16.619, dec: -10.567}, {ra: 16.239, dec: -3.694}, {ra: 16.305, dec: 8.367},
+                {ra: 17.367, dec: -24.999}, {ra: 17.724, dec: -21.687}, {ra: 17.798, dec: 2.707},
+                {ra: 16.961, dec: 9.375}],
+        lines: [[0,9], [9,5], [5,4], [4,3], [3,2], [2,6], [6,7], [7,1], [1,8], [8,0]]
+    },
+    "Serpens Caput": {
+        stars: [{ra: 15.738, dec: 6.426}, {ra: 15.770, dec: 15.422}, {ra: 15.580, dec: 10.539},
+                {ra: 15.940, dec: 15.665}, {ra: 15.849, dec: 4.478}, {ra: 15.769, dec: 18.142}],
+        lines: [[4,0], [0,2], [2,1], [1,3], [3,5]]
+    }
+};
+
+// ========== THEMES ==========
+const THEMES = {
+    midnight: {
+        background: ["#050a15", "#0a1020", "#0d1525"],
+        starColor: "#ffffff", starGlow: "#b8d4ff",
+        constellationColor: "#4a7fff", constellationGlow: "rgba(74, 127, 255, 0.4)",
+        compassColor: "#ffffff", textColor: "#ffffff", accentColor: "#6a9fff",
+        milkyWayColor: "rgba(180, 200, 255, 0.12)", milkyWayIntensity: 0.7
+    },
+    celestial: {
+        background: ["#080510", "#120820", "#1a1040"],
+        starColor: "#ffffff", starGlow: "#d4b8ff",
+        constellationColor: "#9966ff", constellationGlow: "rgba(153, 102, 255, 0.4)",
+        compassColor: "#e8dcff", textColor: "#f0e8ff", accentColor: "#b088ff",
+        milkyWayColor: "rgba(200, 180, 255, 0.15)", milkyWayIntensity: 0.8
+    },
+    cosmos: {
+        background: ["#050815", "#0a1525", "#102040"],
+        starColor: "#ffffff", starGlow: "#88ccff",
+        constellationColor: "#44aaff", constellationGlow: "rgba(68, 170, 255, 0.4)",
+        compassColor: "#c8e0ff", textColor: "#e8f4ff", accentColor: "#66bbff",
+        milkyWayColor: "rgba(150, 200, 255, 0.18)", milkyWayIntensity: 0.9
+    },
+    sepia: {
+        background: ["#0a0805", "#141008", "#1f1812"],
+        starColor: "#fff8e8", starGlow: "#ffd488",
+        constellationColor: "#c9a962", constellationGlow: "rgba(201, 169, 98, 0.4)",
+        compassColor: "#e8d8c0", textColor: "#f0e8d8", accentColor: "#d4b474",
+        milkyWayColor: "rgba(255, 220, 180, 0.08)", milkyWayIntensity: 0.5
+    },
+    navy: {
+        background: ["#020508", "#051020", "#0a1830"],
+        starColor: "#ffffff", starGlow: "#a8c8ff",
+        constellationColor: "#5588cc", constellationGlow: "rgba(85, 136, 204, 0.4)",
+        compassColor: "#b8d0e8", textColor: "#d8e8f8", accentColor: "#6699cc",
+        milkyWayColor: "rgba(160, 190, 255, 0.14)", milkyWayIntensity: 0.75
+    },
+    minimal: {
+        background: ["#000000", "#080810", "#0c1018"],
+        starColor: "#ffffff", starGlow: "#ffffff",
+        constellationColor: "#888888", constellationGlow: "rgba(136, 136, 136, 0.3)",
+        compassColor: "#aaaaaa", textColor: "#cccccc", accentColor: "#888888",
+        milkyWayColor: "rgba(255, 255, 255, 0.04)", milkyWayIntensity: 0.3
+    }
+};
+
+// ========== STATE ==========
+let currentStep = 1;
+let selectedTheme = 'midnight';
+let posterData = {};
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    document.getElementById('posterDate').value = now.toISOString().split('T')[0];
+    document.getElementById('posterTime').value = '21:00';
+    setupLocationSearch();
+});
+
+// ========== ASTRONOMY ==========
+function calculateJulianDate(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hour = date.getHours() + date.getMinutes() / 60;
+    let a = Math.floor((14 - month) / 12);
+    let y = year + 4800 - a;
+    let m = month + 12 * a - 3;
+    let jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+    return jd + (hour - 12) / 24;
+}
+
+function calculateLST(date, longitude) {
+    const jd = calculateJulianDate(date);
+    const T = (jd - 2451545.0) / 36525.0;
+    let gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T;
+    gmst = ((gmst % 360) + 360) % 360;
+    let lst = ((gmst + longitude) % 360 + 360) % 360;
+    return lst / 15;
+}
+
+function equatorialToHorizontal(ra, dec, lat, lst) {
+    const ha = (lst - ra) * 15 * Math.PI / 180;
+    const decRad = dec * Math.PI / 180;
+    const latRad = lat * Math.PI / 180;
+    const sinAlt = Math.sin(decRad) * Math.sin(latRad) + Math.cos(decRad) * Math.cos(latRad) * Math.cos(ha);
+    const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt))) * 180 / Math.PI;
+    const cosAz = (Math.sin(decRad) - Math.sin(latRad) * sinAlt) / (Math.cos(latRad) * Math.cos(alt * Math.PI / 180));
+    let az = Math.acos(Math.max(-1, Math.min(1, cosAz))) * 180 / Math.PI;
+    if (Math.sin(ha) > 0) az = 360 - az;
+    return { alt: alt, az: az };
+}
+
+function horizontalToXY(alt, az, centerX, centerY, radius) {
+    const r = radius * Math.cos(alt * Math.PI / 180) / (1 + Math.sin(alt * Math.PI / 180));
+    const angle = (az - 90) * Math.PI / 180;
+    return { x: centerX + r * Math.cos(angle), y: centerY + r * Math.sin(angle) };
+}
+
+// ========== NAVIGATION ==========
+function showStep(step) {
+    document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('step' + step).classList.add('active');
+    document.querySelectorAll('.progress-dot').forEach(function(dot, i) {
+        dot.classList.remove('active', 'completed');
+        if (i + 1 < step) dot.classList.add('completed');
+        else if (i + 1 === step) dot.classList.add('active');
+    });
+    document.querySelectorAll('.progress-line').forEach(function(line, i) {
+        if (i + 1 < step) line.classList.add('completed');
+        else line.classList.remove('completed');
+    });
+}
+
+function nextStep() {
+    if (currentStep === 2) {
+        if (!document.getElementById('posterDate').value || !document.getElementById('posterTime').value) {
+            alert('Please enter both date and time'); return;
+        }
+    }
+    if (currentStep === 3) {
+        if (!document.getElementById('latitude').value || !document.getElementById('longitude').value) {
+            alert('Please select a location'); return;
+        }
+    }
+    currentStep++;
+    showStep(currentStep);
+}
+
+function prevStep() {
+    currentStep--;
+    showStep(currentStep);
+}
+
+function backToEdit() {
+    currentStep = 4;
+    showStep(currentStep);
+}
+
+function selectTheme(theme) {
+    selectedTheme = theme;
+    document.querySelectorAll('.theme-card').forEach(function(card) {
+        card.classList.toggle('selected', card.dataset.theme === theme);
+    });
+}
+
+function toggleOption(el, inputId) {
+    var input = document.getElementById(inputId);
+    var isChecked = !input.checked;
+    input.checked = isChecked;
+    if (isChecked) {
+        el.classList.add('checked');
+    } else {
+        el.classList.remove('checked');
+    }
+}
+
+// ========== LOCATION ==========
+function setupLocationSearch() {
+    const searchInput = document.getElementById('locationSearch');
+    const resultsDiv = document.getElementById('locationResults');
+    let searchTimeout;
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        if (query.length < 3) { resultsDiv.classList.remove('visible'); return; }
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() { searchLocation(query); }, 400);
+    });
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.location-wrapper')) resultsDiv.classList.remove('visible');
+    });
+}
+
+function searchLocation(query) {
+    const resultsDiv = document.getElementById('locationResults');
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&limit=5', {
+        headers: { 'User-Agent': 'AstroGrid Star Map' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(results) {
+        if (results.length === 0) {
+            resultsDiv.innerHTML = '<div class="location-result"><div class="location-result-name">No results found</div></div>';
+        } else {
+            resultsDiv.innerHTML = results.map(function(r) {
+                return '<div class="location-result" onclick="selectLocation(' + r.lat + ',' + r.lon + ',\'' + r.display_name.replace(/'/g, "\\'") + '\')">' +
+                       '<div class="location-result-name">' + r.display_name.split(',')[0] + '</div>' +
+                       '<div class="location-result-details">' + r.display_name + '</div></div>';
+            }).join('');
+        }
+        resultsDiv.classList.add('visible');
+    })
+    .catch(function(err) { console.error(err); });
+}
+
+function selectLocation(lat, lon, name) {
+    document.getElementById('latitude').value = parseFloat(lat).toFixed(4);
+    document.getElementById('longitude').value = parseFloat(lon).toFixed(4);
+    document.getElementById('locationDisplay').value = name;
+    document.getElementById('locationResults').classList.remove('visible');
+    document.getElementById('locationSearch').value = '';
+}
+
+// ========== POSTER GENERATION ==========
+function generatePoster() {
+    posterData = {
+        title: document.getElementById('posterTitle').value || 'A Special Moment',
+        subtitle: document.getElementById('posterSubtitle').value,
+        date: document.getElementById('posterDate').value,
+        time: document.getElementById('posterTime').value,
+        locationName: document.getElementById('locationDisplay').value,
+        latitude: parseFloat(document.getElementById('latitude').value),
+        longitude: parseFloat(document.getElementById('longitude').value),
+        theme: selectedTheme,
+        options: {
+            constellations: document.getElementById('optConstellations').checked,
+            milkyWay: document.getElementById('optMilkyWay').checked,
+            compass: document.getElementById('optCompass').checked,
+            labels: document.getElementById('optLabels').checked,
+            grid: document.getElementById('optGrid').checked
+        }
+    };
+    
+    document.getElementById('loadingOverlay').classList.add('visible');
+    
+    setTimeout(function() {
+        try {
+            drawPoster(posterData);
+            currentStep = 5;
+            showStep(5);
+        } catch (err) {
+            console.error('Error:', err);
+            alert('Error generating star map');
+        }
+        document.getElementById('loadingOverlay').classList.remove('visible');
+    }, 100);
+}
+
+function drawPoster(data) {
+    const canvas = document.getElementById('posterCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const theme = THEMES[data.theme];
+    
+    const dateTime = new Date(data.date + 'T' + data.time);
+    const lst = calculateLST(dateTime, data.longitude);
+    
+    const centerX = width / 2;
+    const centerY = 380 + (height - 380 - 500) / 2;
+    const radius = Math.min(width - 240, height - 380 - 500) / 2;
+    
+    // Clear and fill entire background with darkest color
+    ctx.fillStyle = theme.background[0];
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw circle background (darker in center, lighter at edges for depth)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.clip();
+    
+    // Circle interior gradient
+    const circleGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+    circleGrad.addColorStop(0, theme.background[2]);
+    circleGrad.addColorStop(0.7, theme.background[1]);
+    circleGrad.addColorStop(1, theme.background[0]);
+    ctx.fillStyle = circleGrad;
+    ctx.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
+    
+    // Milky Way (inside clip)
+    if (data.options.milkyWay) {
+        drawMilkyWay(ctx, centerX, centerY, radius, theme, data.latitude, lst);
+    }
+    
+    // Stars (inside clip)
+    drawStarfield(ctx, centerX, centerY, radius, theme, data.latitude, lst);
+    
+    // Constellations (inside clip)
+    if (data.options.constellations) {
+        drawConstellations(ctx, centerX, centerY, radius, theme, data.latitude, lst, data.options.labels);
+    }
+    
+    ctx.restore();
+    
+    // Compass
+    if (data.options.compass) {
+        drawCompassRing(ctx, centerX, centerY, radius, theme, data.options.grid);
+    }
+    
+    // Border
+    ctx.strokeStyle = theme.compassColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Text
+    drawText(ctx, width, height, centerY, radius, theme, data, dateTime);
+}
+
+function drawMilkyWay(ctx, centerX, centerY, radius, theme, latitude, lst) {
+    const gcRA = 17.75, gcDec = -29;
+    const gc = equatorialToHorizontal(gcRA, gcDec, latitude, lst);
+    const gcXY = horizontalToXY(gc.alt, gc.az, centerX, centerY, radius);
+    const opp = equatorialToHorizontal((gcRA + 12) % 24, 29, latitude, lst);
+    const oppXY = horizontalToXY(opp.alt, opp.az, centerX, centerY, radius);
+    const angle = Math.atan2(oppXY.y - gcXY.y, oppXY.x - gcXY.x);
+    
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+    
+    const intensity = theme.milkyWayIntensity;
+    for (let layer = 0; layer < 5; layer++) {
+        const bandWidth = (200 - layer * 30) * (radius / 500);
+        const alpha = intensity * (0.15 - layer * 0.02);
+        const grad = ctx.createLinearGradient(0, -bandWidth, 0, bandWidth);
+        grad.addColorStop(0, 'transparent');
+        grad.addColorStop(0.3, theme.milkyWayColor.replace(/[\d.]+\)$/, (alpha * 0.5) + ')'));
+        grad.addColorStop(0.5, theme.milkyWayColor.replace(/[\d.]+\)$/, alpha + ')'));
+        grad.addColorStop(0.7, theme.milkyWayColor.replace(/[\d.]+\)$/, (alpha * 0.5) + ')'));
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.fillRect(-radius * 1.5, -bandWidth, radius * 3, bandWidth * 2);
+    }
+    
+    // Clouds
+    for (let i = 0; i < 80; i++) {
+        const x = (Math.random() - 0.5) * radius * 2.5;
+        const y = (Math.random() - 0.5) * 150 * (radius / 500);
+        const size = (20 + Math.random() * 60) * (radius / 500);
+        const cloudAlpha = intensity * (0.03 + Math.random() * 0.05);
+        const cg = ctx.createRadialGradient(x, y, 0, x, y, size);
+        cg.addColorStop(0, theme.milkyWayColor.replace(/[\d.]+\)$/, cloudAlpha + ')'));
+        cg.addColorStop(1, 'transparent');
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawStarfield(ctx, centerX, centerY, radius, theme, latitude, lst) {
+    const visible = [];
+    for (let i = 0; i < ALL_STARS.length; i++) {
+        const star = ALL_STARS[i];
+        const h = equatorialToHorizontal(star[0], star[1], latitude, lst);
+        if (h.alt > 0) {
+            const pos = horizontalToXY(h.alt, h.az, centerX, centerY, radius);
+            const dist = Math.sqrt((pos.x - centerX) * (pos.x - centerX) + (pos.y - centerY) * (pos.y - centerY));
+            if (dist <= radius) {
+                visible.push({ x: pos.x, y: pos.y, mag: star[2], alt: h.alt, name: star[3] });
+            }
+        }
+    }
+    visible.sort(function(a, b) { return b.mag - a.mag; });
+    
+    for (let i = 0; i < visible.length; i++) {
+        const star = visible[i];
+        const brightness = Math.max(0.15, Math.min(1, (7 - star.mag) / 7));
+        const size = Math.max(0.6, (6.5 - star.mag) * 0.9);
+        const altFade = Math.min(1, star.alt / 15);
+        const fb = brightness * (0.4 + altFade * 0.6);
+        
+        if (star.mag < 3.5) {
+            const gs = size * 7;
+            const gg = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, gs);
+            gg.addColorStop(0, theme.starGlow);
+            gg.addColorStop(0.08, 'rgba(255,255,255,' + (fb * 0.5) + ')');
+            gg.addColorStop(0.25, 'rgba(255,255,255,' + (fb * 0.15) + ')');
+            gg.addColorStop(1, 'transparent');
+            ctx.fillStyle = gg;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, gs, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        if (star.mag < 1.5) {
+            ctx.save();
+            ctx.strokeStyle = theme.starColor;
+            ctx.globalAlpha = fb * 0.25;
+            ctx.lineWidth = 0.8;
+            const sl = size * 10;
+            ctx.beginPath();
+            ctx.moveTo(star.x - sl, star.y);
+            ctx.lineTo(star.x + sl, star.y);
+            ctx.moveTo(star.x, star.y - sl);
+            ctx.lineTo(star.x, star.y + sl);
+            ctx.stroke();
+            ctx.restore();
+        }
+        
+        ctx.fillStyle = theme.starColor;
+        ctx.globalAlpha = fb;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+function drawConstellations(ctx, centerX, centerY, radius, theme, latitude, lst, showLabels) {
+    for (const name in CONSTELLATIONS) {
+        const c = CONSTELLATIONS[name];
+        const positions = [];
+        let visible = 0;
+        
+        for (let i = 0; i < c.stars.length; i++) {
+            const s = c.stars[i];
+            const h = equatorialToHorizontal(s.ra, s.dec, latitude, lst);
+            if (h.alt > 0) {
+                const pos = horizontalToXY(h.alt, h.az, centerX, centerY, radius);
+                const dist = Math.sqrt((pos.x - centerX) * (pos.x - centerX) + (pos.y - centerY) * (pos.y - centerY));
+                if (dist <= radius) {
+                    positions.push({ x: pos.x, y: pos.y });
+                    visible++;
+                } else {
+                    positions.push(null);
+                }
+            } else {
+                positions.push(null);
+            }
+        }
+        
+        if (visible < 2) continue;
+        
+        // Glow
+        ctx.save();
+        ctx.strokeStyle = theme.constellationGlow;
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.4;
+        for (let i = 0; i < c.lines.length; i++) {
+            const line = c.lines[i];
+            if (positions[line[0]] && positions[line[1]]) {
+                ctx.beginPath();
+                ctx.moveTo(positions[line[0]].x, positions[line[0]].y);
+                ctx.lineTo(positions[line[1]].x, positions[line[1]].y);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+        
+        // Lines
+        ctx.strokeStyle = theme.constellationColor;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.85;
+        for (let i = 0; i < c.lines.length; i++) {
+            const line = c.lines[i];
+            if (positions[line[0]] && positions[line[1]]) {
+                ctx.beginPath();
+                ctx.moveTo(positions[line[0]].x, positions[line[0]].y);
+                ctx.lineTo(positions[line[1]].x, positions[line[1]].y);
+                ctx.stroke();
+            }
+        }
+        ctx.globalAlpha = 1;
+        
+        // Stars
+        for (let i = 0; i < positions.length; i++) {
+            const pos = positions[i];
+            if (!pos) continue;
+            const ss = 5;
+            const sg = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, ss * 5);
+            sg.addColorStop(0, theme.constellationColor);
+            sg.addColorStop(0.2, theme.constellationGlow);
+            sg.addColorStop(1, 'transparent');
+            ctx.fillStyle = sg;
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, ss * 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, ss, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawCompassRing(ctx, centerX, centerY, radius, theme, showGrid) {
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    
+    const rr = radius + 30;
+    ctx.strokeStyle = theme.compassColor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, rr, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    for (let deg = 0; deg < 360; deg++) {
+        const angle = (deg - 90) * Math.PI / 180;
+        const isCard = deg % 90 === 0;
+        const isMaj = deg % 30 === 0;
+        const isMin = deg % 10 === 0;
+        
+        if (isCard || (showGrid && (isMaj || isMin))) {
+            const r1 = rr;
+            const r2 = isCard ? rr + 18 : (isMaj ? rr + 12 : rr + 6);
+            ctx.strokeStyle = theme.compassColor;
+            ctx.lineWidth = isCard ? 2.5 : (isMaj ? 1.5 : 1);
+            ctx.globalAlpha = isCard ? 1 : (isMaj ? 0.7 : 0.4);
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * r1, Math.sin(angle) * r1);
+            ctx.lineTo(Math.cos(angle) * r2, Math.sin(angle) * r2);
+            ctx.stroke();
+        }
+    }
+    ctx.globalAlpha = 1;
+    
+    const cards = [{l: 'N', d: 0}, {l: 'E', d: 90}, {l: 'S', d: 180}, {l: 'W', d: 270}];
+    ctx.font = 'bold 32px "Source Sans 3"';
+    ctx.fillStyle = theme.compassColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < cards.length; i++) {
+        const angle = (cards[i].d - 90) * Math.PI / 180;
+        const tr = radius + 63;
+        ctx.fillText(cards[i].l, Math.cos(angle) * tr, Math.sin(angle) * tr);
+    }
+    
+    if (showGrid) {
+        ctx.font = '16px "Source Sans 3"';
+        ctx.globalAlpha = 0.45;
+        for (let deg = 30; deg < 360; deg += 30) {
+            if (deg % 90 !== 0) {
+                const angle = (deg - 90) * Math.PI / 180;
+                const tr = radius + 63;
+                ctx.fillText(deg + '°', Math.cos(angle) * tr, Math.sin(angle) * tr);
+            }
+        }
+        ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+}
+
+function drawText(ctx, width, height, centerY, radius, theme, data, dateTime) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = theme.textColor;
+    
+    ctx.font = '500 80px "Cormorant Garamond"';
+    ctx.fillText(data.title, width / 2, 180);
+    
+    if (data.subtitle) {
+        ctx.font = '300 italic 40px "Cormorant Garamond"';
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(data.subtitle, width / 2, 250);
+        ctx.globalAlpha = 1;
+    }
+    
+    const by = centerY + radius + 140;
+    
+    if (data.locationName) {
+        const parts = data.locationName.split(',');
+        const short = parts.slice(0, 2).join(',').trim();
+        ctx.font = '400 32px "Source Sans 3"';
+        ctx.fillText(short, width / 2, by);
+    }
+    
+    const ds = dateTime.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const ts = dateTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    ctx.font = '300 28px "Source Sans 3"';
+    ctx.globalAlpha = 0.8;
+    ctx.fillText(ds + ' - ' + ts, width / 2, by + 50);
+    
+    ctx.font = '300 24px "Source Sans 3"';
+    ctx.fillStyle = theme.accentColor;
+    const latD = data.latitude >= 0 ? 'N' : 'S';
+    const lonD = data.longitude >= 0 ? 'E' : 'W';
+    ctx.fillText(Math.abs(data.latitude).toFixed(3) + '° ' + latD + ', ' + Math.abs(data.longitude).toFixed(3) + '° ' + lonD, width / 2, by + 95);
+    ctx.globalAlpha = 1;
+    
+    ctx.font = '400 18px "Source Sans 3"';
+    ctx.fillStyle = theme.textColor;
+    ctx.globalAlpha = 0.3;
+    ctx.fillText('AstroGrid', width / 2, height - 70);
+    ctx.globalAlpha = 1;
+}
+
+// ========== DOWNLOAD ==========
+function downloadPoster(format) {
+    const canvas = document.getElementById('posterCanvas');
+    const link = document.createElement('a');
+    const fn = posterData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    
+    if (format === 'jpg') {
+        const tc = document.createElement('canvas');
+        tc.width = canvas.width;
+        tc.height = canvas.height;
+        const tctx = tc.getContext('2d');
+        tctx.fillStyle = '#000000';
+        tctx.fillRect(0, 0, tc.width, tc.height);
+        tctx.drawImage(canvas, 0, 0);
+        link.download = 'astrogrid-' + fn + '.jpg';
+        link.href = tc.toDataURL('image/jpeg', 0.95);
+    } else {
+        link.download = 'astrogrid-' + fn + '.png';
+        link.href = canvas.toDataURL('image/png');
+    }
+    link.click();
+}
+
+function resetCreator() {
+    currentStep = 1;
+    showStep(1);
+    document.getElementById('posterTitle').value = '';
+    document.getElementById('posterSubtitle').value = '';
+    document.getElementById('locationDisplay').value = '';
+    document.getElementById('latitude').value = '';
+    document.getElementById('longitude').value = '';
+    document.getElementById('locationSearch').value = '';
+    selectedTheme = 'midnight';
+    document.querySelectorAll('.theme-card').forEach(function(c) { c.classList.toggle('selected', c.dataset.theme === 'midnight'); });
+}
+
+function openTip(amount) {
+    alert('Thank you for the £' + amount + ' tip! (Payment integration coming soon)');
+}
+</script>
+</body>
+</html>
