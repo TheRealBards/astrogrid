@@ -4,8 +4,6 @@ A free, browser-based star map generator that creates beautiful, astronomically 
 
 **[Try it live →](https://therealbards.github.io/astrogrid)**
 
-![AstroGrid Preview](preview.png)
-
 ## Features
 
 - **Astronomically Accurate** — Star positions calculated using precise algorithms with over 9,000 stars
