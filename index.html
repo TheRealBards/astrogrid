@@ -533,6 +533,11 @@
                         <span class="checkmark"></span>
                         <span>Degree Grid</span>
                     </div>
+                    <div class="option-checkbox checked" onclick="toggleOption(this, 'optPlanets')">
+                        <input type="checkbox" id="optPlanets" checked>
+                        <span class="checkmark"></span>
+                        <span>Planets</span>
+                    </div>
                 </div>
             </div>
             <div class="btn-group">
@@ -646,10 +651,18 @@ const CONSTELLATIONS = {
         lines: [[0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [6,3]]
     },
     "Orion": {
-        stars: [{ra: 5.919, dec: 7.407}, {ra: 5.419, dec: 6.350}, {ra: 5.242, dec: -8.202},
-                {ra: 5.795, dec: -9.670}, {ra: 5.679, dec: -1.943}, {ra: 5.603, dec: -1.202}, {ra: 5.533, dec: -0.299},
-                {ra: 5.586, dec: 9.934}, {ra: 5.906, dec: 20.276}, {ra: 5.533, dec: 9.490}, {ra: 6.066, dec: 14.209}],
-        lines: [[0,1], [1,6], [6,5], [5,4], [4,3], [3,2], [2,1], [0,7], [7,9], [9,1], [0,8], [8,10]]
+        // Betelgeuse, Bellatrix, Rigel, Saiph, Alnitak, Alnilam, Mintaka, plus sword
+        stars: [
+            {ra: 5.9195, dec: 7.407},    // 0: Betelgeuse (left shoulder)
+            {ra: 5.4185, dec: 6.350},    // 1: Bellatrix (right shoulder)  
+            {ra: 5.2423, dec: -8.202},   // 2: Rigel (right foot)
+            {ra: 5.7959, dec: -9.670},   // 3: Saiph (left foot)
+            {ra: 5.6794, dec: -1.943},   // 4: Alnitak (belt left)
+            {ra: 5.6036, dec: -1.202},   // 5: Alnilam (belt center)
+            {ra: 5.5335, dec: -0.299},   // 6: Mintaka (belt right)
+            {ra: 5.5878, dec: -2.600}    // 7: Sword (below belt)
+        ],
+        lines: [[0,1], [0,4], [1,6], [4,5], [5,6], [4,3], [6,2], [0,3], [1,2], [5,7]]
     },
     "Cassiopeia": {
         stars: [{ra: 0.153, dec: 59.150}, {ra: 0.656, dec: 56.537}, {ra: 0.945, dec: 60.717},
@@ -1163,6 +1176,161 @@ function horizontalToXY(alt, az, centerX, centerY, radius) {
     return { x: centerX + r * Math.cos(angle), y: centerY + r * Math.sin(angle) };
 }
 
+// ========== PLANET CALCULATIONS ==========
+// Keplerian orbital elements for planets (J2000 epoch with rates per century)
+const PLANETS = {
+    Mercury: {
+        color: '#b5b5b5', size: 1.0,
+        a: [0.38709927, 0.00000037], e: [0.20563593, 0.00001906],
+        I: [7.00497902, -0.00594749], L: [252.25032350, 149472.67411175],
+        w: [77.45779628, 0.16047689], O: [48.33076593, -0.12534081]
+    },
+    Venus: {
+        color: '#ffffcc', size: 1.8,
+        a: [0.72333566, 0.00000390], e: [0.00677672, -0.00004107],
+        I: [3.39467605, -0.00078890], L: [181.97909950, 58517.81538729],
+        w: [131.60246718, 0.00268329], O: [76.67984255, -0.27769418]
+    },
+    Mars: {
+        color: '#ff6b4a', size: 1.2,
+        a: [1.52371034, 0.00001847], e: [0.09339410, 0.00007882],
+        I: [1.84969142, -0.00813131], L: [-4.55343205, 19140.30268499],
+        w: [-23.94362959, 0.44441088], O: [49.55953891, -0.29257343]
+    },
+    Jupiter: {
+        color: '#ffcc99', size: 2.2,
+        a: [5.20288700, -0.00011607], e: [0.04838624, -0.00013253],
+        I: [1.30439695, -0.00183714], L: [34.39644051, 3034.74612775],
+        w: [14.72847983, 0.21252668], O: [100.47390909, 0.20469106]
+    },
+    Saturn: {
+        color: '#ffe4b5', size: 2.0,
+        a: [9.53667594, -0.00125060], e: [0.05386179, -0.00050991],
+        I: [2.48599187, 0.00193609], L: [49.95424423, 1222.49362201],
+        w: [92.59887831, -0.41897216], O: [113.66242448, -0.28867794]
+    }
+};
+
+function calculatePlanetPosition(planet, jd) {
+    var p = PLANETS[planet];
+    var T = (jd - 2451545.0) / 36525.0; // Centuries since J2000
+    
+    // Calculate orbital elements at given time
+    var a = p.a[0] + p.a[1] * T;
+    var e = p.e[0] + p.e[1] * T;
+    var I = p.I[0] + p.I[1] * T;
+    var L = p.L[0] + p.L[1] * T;
+    var w = p.w[0] + p.w[1] * T;
+    var O = p.O[0] + p.O[1] * T;
+    
+    // Argument of perihelion and mean anomaly
+    var wBar = w;
+    var M = L - wBar;
+    M = ((M % 360) + 360) % 360;
+    
+    // Solve Kepler's equation for eccentric anomaly (Newton-Raphson)
+    var E = M * Math.PI / 180;
+    for (var i = 0; i < 10; i++) {
+        E = E - (E - e * Math.sin(E) - M * Math.PI / 180) / (1 - e * Math.cos(E));
+    }
+    
+    // True anomaly
+    var v = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+    
+    // Heliocentric distance
+    var r = a * (1 - e * Math.cos(E));
+    
+    // Heliocentric coordinates in orbital plane
+    var xOrb = r * Math.cos(v);
+    var yOrb = r * Math.sin(v);
+    
+    // Convert to ecliptic coordinates
+    var wArg = (wBar - O) * Math.PI / 180;
+    var ORad = O * Math.PI / 180;
+    var IRad = I * Math.PI / 180;
+    
+    var cosO = Math.cos(ORad), sinO = Math.sin(ORad);
+    var cosI = Math.cos(IRad), sinI = Math.sin(IRad);
+    var cosW = Math.cos(wArg), sinW = Math.sin(wArg);
+    
+    var x = (cosO * cosW - sinO * sinW * cosI) * xOrb + (-cosO * sinW - sinO * cosW * cosI) * yOrb;
+    var y = (sinO * cosW + cosO * sinW * cosI) * xOrb + (-sinO * sinW + cosO * cosW * cosI) * yOrb;
+    var z = (sinW * sinI) * xOrb + (cosW * sinI) * yOrb;
+    
+    return { x: x, y: y, z: z };
+}
+
+function calculateEarthPosition(jd) {
+    // Simplified Earth position
+    var T = (jd - 2451545.0) / 36525.0;
+    var L = 280.46646 + 36000.76983 * T;
+    var M = 357.52911 + 35999.05029 * T;
+    L = ((L % 360) + 360) % 360;
+    M = M * Math.PI / 180;
+    
+    var C = (1.914602 - 0.004817 * T) * Math.sin(M) + 0.019993 * Math.sin(2 * M);
+    var sunLon = (L + C) * Math.PI / 180;
+    var sunDist = 1.000001018 * (1 - 0.01671123 * Math.cos(M));
+    
+    // Earth is opposite to Sun
+    return {
+        x: -sunDist * Math.cos(sunLon),
+        y: -sunDist * Math.sin(sunLon),
+        z: 0
+    };
+}
+
+function getPlanetRADec(planet, jd) {
+    var pPos = calculatePlanetPosition(planet, jd);
+    var ePos = calculateEarthPosition(jd);
+    
+    // Geocentric position
+    var dx = pPos.x - ePos.x;
+    var dy = pPos.y - ePos.y;
+    var dz = pPos.z - ePos.z;
+    
+    // Convert ecliptic to equatorial (obliquity ~23.44°)
+    var obliquity = 23.4393 * Math.PI / 180;
+    var xEq = dx;
+    var yEq = dy * Math.cos(obliquity) - dz * Math.sin(obliquity);
+    var zEq = dy * Math.sin(obliquity) + dz * Math.cos(obliquity);
+    
+    // Calculate RA and Dec
+    var ra = Math.atan2(yEq, xEq) * 180 / Math.PI;
+    ra = ((ra % 360) + 360) % 360;
+    var dec = Math.atan2(zEq, Math.sqrt(xEq * xEq + yEq * yEq)) * 180 / Math.PI;
+    
+    // Distance for brightness calculation
+    var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    
+    return { ra: ra / 15, dec: dec, dist: dist }; // RA in hours
+}
+
+function getVisiblePlanets(jd, latitude, lst) {
+    var visible = [];
+    var planetNames = ['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+    
+    for (var i = 0; i < planetNames.length; i++) {
+        var name = planetNames[i];
+        var pos = getPlanetRADec(name, jd);
+        var altAz = equatorialToHorizontal(pos.ra, pos.dec, latitude, lst);
+        
+        if (altAz.alt > 0) { // Above horizon
+            visible.push({
+                name: name,
+                ra: pos.ra,
+                dec: pos.dec,
+                alt: altAz.alt,
+                az: altAz.az,
+                color: PLANETS[name].color,
+                size: PLANETS[name].size
+            });
+        }
+    }
+    
+    return visible;
+}
+
 // ========== NAVIGATION ==========
 function showStep(step) {
     document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
@@ -1282,7 +1450,8 @@ function generatePoster() {
             milkyWay: document.getElementById('optMilkyWay').checked,
             compass: document.getElementById('optCompass').checked,
             labels: document.getElementById('optLabels').checked,
-            grid: document.getElementById('optGrid').checked
+            grid: document.getElementById('optGrid').checked,
+            planets: document.getElementById('optPlanets').checked
         }
     };
     
@@ -1340,6 +1509,12 @@ function drawPoster(data) {
     
     // Stars (inside clip)
     drawStarfield(ctx, centerX, centerY, radius, theme, data.latitude, lst);
+    
+    // Planets (inside clip)
+    if (data.options.planets) {
+        var jd = calculateJulianDate(dateTime);
+        drawPlanets(ctx, centerX, centerY, radius, theme, data.latitude, lst, jd, data.options.labels);
+    }
     
     // Constellations (inside clip)
     if (data.options.constellations) {
@@ -1463,6 +1638,72 @@ function drawStarfield(ctx, centerX, centerY, radius, theme, latitude, lst) {
         ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
+    }
+}
+
+function drawPlanets(ctx, centerX, centerY, radius, theme, latitude, lst, jd, showLabels) {
+    var planets = getVisiblePlanets(jd, latitude, lst);
+    
+    for (var i = 0; i < planets.length; i++) {
+        var planet = planets[i];
+        var pos = horizontalToXY(planet.alt, planet.az, centerX, centerY, radius);
+        
+        // Check if within circle
+        var dist = Math.sqrt((pos.x - centerX) * (pos.x - centerX) + (pos.y - centerY) * (pos.y - centerY));
+        if (dist > radius) continue;
+        
+        var baseSize = planet.size * 4; // Planets are visually larger
+        
+        // Parse hex color to RGB for gradients
+        var hex = planet.color.replace('#', '');
+        var r = parseInt(hex.substring(0, 2), 16);
+        var g = parseInt(hex.substring(2, 4), 16);
+        var b = parseInt(hex.substring(4, 6), 16);
+        
+        // Outer glow
+        var outerGlow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, baseSize * 6);
+        outerGlow.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ', 0.8)');
+        outerGlow.addColorStop(0.3, 'rgba(' + r + ',' + g + ',' + b + ', 0.3)');
+        outerGlow.addColorStop(0.6, 'rgba(' + r + ',' + g + ',' + b + ', 0.1)');
+        outerGlow.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ', 0)');
+        ctx.fillStyle = outerGlow;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, baseSize * 6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner bright glow
+        var innerGlow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, baseSize * 2);
+        innerGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        innerGlow.addColorStop(0.3, 'rgba(' + r + ',' + g + ',' + b + ', 0.9)');
+        innerGlow.addColorStop(0.7, 'rgba(' + r + ',' + g + ',' + b + ', 0.4)');
+        innerGlow.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ', 0)');
+        ctx.fillStyle = innerGlow;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, baseSize * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Core
+        ctx.fillStyle = planet.color;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, baseSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Bright center
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, baseSize * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Label
+        if (showLabels) {
+            ctx.save();
+            ctx.font = '500 26px "Source Sans 3"';
+            ctx.fillStyle = planet.color;
+            ctx.textAlign = 'left';
+            ctx.globalAlpha = 0.9;
+            ctx.fillText(planet.name, pos.x + baseSize * 2 + 10, pos.y + 8);
+            ctx.restore();
+        }
     }
 }
 
