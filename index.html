@@ -10,23 +10,23 @@
     <meta name="keywords" content="star map, night sky map, custom star map, star poster, constellation map, astronomy gift, wedding gift, anniversary gift, birth chart, night sky poster, star chart generator">
     <meta name="author" content="AstroGrid">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://astrogrid.co.uk/">
+    <link rel="canonical" href="https://yourdomain.com/">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://astrogrid.co.uk/">
+    <meta property="og:url" content="https://yourdomain.com/">
     <meta property="og:title" content="AstroGrid - Create Your Perfect Star Map">
     <meta property="og:description" content="Create beautiful, astronomically accurate star maps for any date, time and location. Perfect for weddings, births, anniversaries or any special moment.">
-    <meta property="og:image" content="https://astrogrid.co.uk/og-image.png">
+    <meta property="og:image" content="https://yourdomain.com/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://astrogrid.co.uk/">
+    <meta name="twitter:url" content="https://yourdomain.com/">
     <meta name="twitter:title" content="AstroGrid - Create Your Perfect Star Map">
     <meta name="twitter:description" content="Create beautiful, astronomically accurate star maps for any date, time and location. Perfect for weddings, births, anniversaries or any special moment.">
-    <meta name="twitter:image" content="https://astrogrid.co.uk/og-image.png">
+    <meta name="twitter:image" content="https://yourdomain.com/og-image.png">
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
@@ -38,7 +38,7 @@
         "@type": "WebApplication",
         "name": "AstroGrid",
         "description": "Create beautiful, astronomically accurate star maps for any date, time and location.",
-        "url": "https://astrogrid.co.uk/",
+        "url": "https://yourdomain.com/",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Any",
         "offers": {
@@ -546,7 +546,7 @@
         <div class="preview-layout">
             <div class="poster-frame">
                 <div class="poster-wrapper">
-                    <canvas id="posterCanvas" width="2400" height="3200"></canvas>
+                    <canvas id="posterCanvas" width="2900" height="4060"></canvas>
                 </div>
             </div>
             <div class="preview-sidebar">
@@ -1312,8 +1312,8 @@ function drawPoster(data) {
     const lst = calculateLST(dateTime, data.longitude);
     
     const centerX = width / 2;
-    const centerY = 380 + (height - 380 - 500) / 2;
-    const radius = Math.min(width - 240, height - 380 - 500) / 2;
+    const centerY = 460 + (height - 460 - 600) / 2;
+    const radius = Math.min(width - 290, height - 460 - 600) / 2;
     
     // Clear and fill entire background with darkest color
     ctx.fillStyle = theme.background[0];
@@ -1606,42 +1606,42 @@ function drawText(ctx, width, height, centerY, radius, theme, data, dateTime) {
     ctx.textAlign = 'center';
     ctx.fillStyle = theme.textColor;
     
-    ctx.font = '500 80px "Cormorant Garamond"';
-    ctx.fillText(data.title, width / 2, 180);
+    ctx.font = '500 96px "Cormorant Garamond"';
+    ctx.fillText(data.title, width / 2, 220);
     
     if (data.subtitle) {
-        ctx.font = '300 italic 40px "Cormorant Garamond"';
+        ctx.font = '300 italic 48px "Cormorant Garamond"';
         ctx.globalAlpha = 0.85;
-        ctx.fillText(data.subtitle, width / 2, 250);
+        ctx.fillText(data.subtitle, width / 2, 300);
         ctx.globalAlpha = 1;
     }
     
-    const by = centerY + radius + 140;
+    const by = centerY + radius + 170;
     
     if (data.locationName) {
         const parts = data.locationName.split(',');
         const short = parts.slice(0, 2).join(',').trim();
-        ctx.font = '400 32px "Source Sans 3"';
+        ctx.font = '400 38px "Source Sans 3"';
         ctx.fillText(short, width / 2, by);
     }
     
     const ds = dateTime.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const ts = dateTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    ctx.font = '300 28px "Source Sans 3"';
+    ctx.font = '300 34px "Source Sans 3"';
     ctx.globalAlpha = 0.8;
-    ctx.fillText(ds + ' - ' + ts, width / 2, by + 50);
+    ctx.fillText(ds + ' - ' + ts, width / 2, by + 60);
     
-    ctx.font = '300 24px "Source Sans 3"';
+    ctx.font = '300 29px "Source Sans 3"';
     ctx.fillStyle = theme.accentColor;
     const latD = data.latitude >= 0 ? 'N' : 'S';
     const lonD = data.longitude >= 0 ? 'E' : 'W';
-    ctx.fillText(Math.abs(data.latitude).toFixed(3) + '° ' + latD + ', ' + Math.abs(data.longitude).toFixed(3) + '° ' + lonD, width / 2, by + 95);
+    ctx.fillText(Math.abs(data.latitude).toFixed(3) + '° ' + latD + ', ' + Math.abs(data.longitude).toFixed(3) + '° ' + lonD, width / 2, by + 115);
     ctx.globalAlpha = 1;
     
-    ctx.font = '400 18px "Source Sans 3"';
+    ctx.font = '400 22px "Source Sans 3"';
     ctx.fillStyle = theme.textColor;
     ctx.globalAlpha = 0.3;
-    ctx.fillText('AstroGrid', width / 2, height - 70);
+    ctx.fillText('AstroGrid', width / 2, height - 85);
     ctx.globalAlpha = 1;
 }
 
